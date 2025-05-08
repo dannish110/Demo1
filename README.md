@@ -1,249 +1,298 @@
-   AMITY UNIVERSITY MUMBAI
-     AMITY SCHOOL OF ENGINEERING AND TECHNOLOGY
-Department of Computer Science & Engineering
-Academic Year 2024-25
+Perfect —
+you want proper folder structure (organized neatly), just like a professional project.
+Let’s design it cleanly:
 
 
+---
 
+Final Folder Structure
 
-Final Year Project on
-“Game Control Using EEG Based BCI”
+task_manager_project/
+│
+├── app/                   # all main code inside app/
+│   ├── __init__.py
+│   ├── auth.py             # login system
+│   ├── models.py           # Task model (Pydantic)
+│   ├── tasks.py            # task operations (insert, view, update, delete)
+│   └── file_manager.py     # file handling (load/save tasks)
+│
+├── data/
+│   └── tasks.txt           # tasks stored here
+│
+├── tests/                  # unit tests
+│   ├── __init__.py
+│   └── test_tasks.py
+│
+└── main.py                 # starts the program
 
-Submitted in partial fulfilment of the requirements for the degree of
 
-Bachelor of Technology
-Department of Computer Science & Engineering 
+---
 
+Code in each file
 
 
-Submitted By
+---
 
-Name     	                    Enrolment no
-1. Amey Patil
-2. Soham Jayakar
-3. Kirtan Dhinoja
-4. Mohmad Danish Rehman	A70405221182
-A70405221142
-A70405221200
-A70405221104
-	
+1. main.py
 
+from app.auth import Auth
+from app.tasks import TaskManager
 
-Under the guidance of
-Dr. Rajiv Iyer
- 
+def main():
+    print("Welcome to Task Manager CLI")
+    print("1. Login")
+    choice = input("Choose: ")
 
-Declaration of Academic Integrity
+    if choice != "1":
+        print("Invalid choice. Exiting...")
+        return
 
+    username = input("Enter username: ")
+    password = input("Enter password: ")
+
+    if not Auth.login(username, password):
+        print("Invalid credentials!")
+        return
 
-We declare that this written submission conveys our ideas in our own words. We have adequately cited and referenced the original sources. We also declare that we have adhered to all principles of academic honesty and integrity and have not misrepresented or fabricated or falsified any idea/date/fact/source in our submission.
+    manager = TaskManager()
+    manager.load_tasks()
 
-We understand that any violation of the above will be cause for disciplinary action by the institute and they can evoke penal action from the sources which have thus not been properly cited or from whom proper permission has not been taken when needed.
+    while True:
+        print("\nI: Insert Task\nV: View Tasks\nU: Update Task\nD: Delete Task\nQ: Quit")
+        action = input("Choose action: ").upper()
 
+        if action == 'I':
+            manager.insert_task()
+        elif action == 'V':
+            manager.view_tasks()
+        elif action == 'U':
+            manager.update_task()
+        elif action == 'D':
+            manager.delete_task()
+        elif action == 'Q':
+            manager.save_tasks()
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid action!")
+
+if __name__ == "__main__":
+    main()
 
+
+---
+
+2. app/auth.py
+
+class Auth:
+    USERNAME = "user"
+    PASSWORD = "pswd"
+
+    @classmethod
+    def login(cls, username, password):
+        return username == cls.USERNAME and password == cls.PASSWORD
+
+
+---
+
+3. app/models.py
+
+from pydantic import BaseModel, validator
+from datetime import datetime
+
+class Task(BaseModel):
+    id: int
+    title: str
+    description: str
+    datetime: datetime
+
+    @validator('title', 'description')
+    def not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Field cannot be empty')
+        return v
+
+
+---
+
+4. app/file_manager.py
+
+import os
+from app.models import Task
+from datetime import datetime
+
+TASKS_FILE = "data/tasks.txt"
+
+class FileManager:
+    @staticmethod
+    def load_tasks():
+        tasks = []
+        if not os.path.exists(TASKS_FILE):
+            return tasks
+        with open(TASKS_FILE, "r") as file:
+            lines = file.readlines()
+            for line in lines:
+                if line.strip():
+                    id, title, description, dt_str = line.strip().split("|")
+                    task = Task(
+                        id=int(id),
+                        title=title,
+                        description=description,
+                        datetime=datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                    )
+                    tasks.append(task)
+        return tasks
+
+    @staticmethod
+    def save_tasks(tasks):
+        with open(TASKS_FILE, "w") as file:
+            for task in tasks:
+                line = f"{task.id}|{task.title}|{task.description}|{task.datetime.strftime('%Y-%m-%d %H:%M')}\n"
+                file.write(line)
+
+
+---
+
+5. app/tasks.py
+
+from app.models import Task
+from app.file_manager import FileManager
+from datetime import datetime
+
+class TaskManager:
+    def __init__(self):
+        self.day_tasks = []
+        self.night_tasks = []
+        self.last_id = 0
+
+    def load_tasks(self):
+        tasks = FileManager.load_tasks()
+        for task in tasks:
+            self.add_task_to_list(task)
+        if tasks:
+            self.last_id = max(task.id for task in tasks)
+
+    def save_tasks(self):
+        all_tasks = self.day_tasks + self.night_tasks
+        FileManager.save_tasks(all_tasks)
+
+    def add_task_to_list(self, task):
+        hour = task.datetime.hour
+        if 9 <= hour < 18:
+            if len(self.day_tasks) < 10:
+                self.day_tasks.append(task)
+        else:
+            if len(self.night_tasks) < 10:
+                self.night_tasks.append(task)
+
+    def insert_task(self):
+        try:
+            title = input("Enter title: ")
+            description = input("Enter description: ")
+            dt_str = input("Enter datetime (yyyy-MM-dd HH:mm): ")
+            dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            new_task = Task(id=self.last_id + 1, title=title, description=description, datetime=dt)
+            self.last_id += 1
+            self.add_task_to_list(new_task)
+            print("Task added successfully!")
+        except Exception as e:
+            print(f"Error: {e}")
+
+    def view_tasks(self):
+        print("\n--- Day Tasks ---")
+        for task in self.day_tasks:
+            print(f"[{task.id}] {task.title} - {task.datetime}")
+
+        print("\n--- Night Tasks ---")
+        for task in self.night_tasks:
+            print(f"[{task.id}] {task.title} - {task.datetime}")
+
+    def update_task(self):
+        try:
+            task_id = int(input("Enter task id to update: "))
+            all_tasks = self.day_tasks + self.night_tasks
+            task = next((t for t in all_tasks if t.id == task_id), None)
+            if not task:
+                print("Task not found!")
+                return
+
+            title = input(f"Enter new title [{task.title}]: ") or task.title
+            description = input(f"Enter new description [{task.description}]: ") or task.description
+            dt_str = input(f"Enter new datetime [{task.datetime.strftime('%Y-%m-%d %H:%M')}]: ") or task.datetime.strftime('%Y-%m-%d %H:%M')
+            dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+
+            task.title = title
+            task.description = description
+            task.datetime = dt
+
+            self.day_tasks.clear()
+            self.night_tasks.clear()
+            for t in all_tasks:
+                self.add_task_to_list(t)
+
+            print("Task updated successfully!")
+        except Exception as e:
+            print(f"Error: {e}")
+
+    def delete_task(self):
+        try:
+            task_id = int(input("Enter task id to delete: "))
+            before_count = len(self.day_tasks) + len(self.night_tasks)
+            self.day_tasks = [t for t in self.day_tasks if t.id != task_id]
+            self.night_tasks = [t for t in self.night_tasks if t.id != task_id]
+            after_count = len(self.day_tasks) + len(self.night_tasks)
+            if before_count == after_count:
+                print("Task not found!")
+            else:
+                print("Task deleted successfully!")
+        except Exception as e:
+            print(f"Error: {e}")
+
+
+---
+
+6. tests/test_tasks.py (Example Unit Test)
+
+import unittest
+from app.models import Task
+from app.tasks import TaskManager
+from datetime import datetime
+
+class TestTaskManager(unittest.TestCase):
+    def setUp(self):
+        self.manager = TaskManager()
+
+    def test_insert_day_task(self):
+        dt = datetime.strptime("2025-04-28 10:00", "%Y-%m-%d %H:%M")
+        task = Task(id=1, title="Test Task", description="desc", datetime=dt)
+        self.manager.add_task_to_list(task)
+        self.assertEqual(len(self.manager.day_tasks), 1)
+
+    def test_insert_night_task(self):
+        dt = datetime.strptime("2025-04-28 20:00", "%Y-%m-%d %H:%M")
+        task = Task(id=2, title="Night Task", description="desc", datetime=dt)
+        self.manager.add_task_to_list(task)
+        self.assertEqual(len(self.manager.night_tasks), 1)
+
+if __name__ == '__main__':
+    unittest.main()
+
+
+---
+
+Important:
+
+The file data/tasks.txt will be auto-created if missing.
+
+Data will persist even after closing and reopening the program.
+
+Tasks are reloaded every time on startup.
+
+
+
+---
+
+Would you also like a ready-to-run ZIP of this project so you can just unzip and run?
+(Or I can show you the terminal commands to set it up in your system?)
+Let me know!
 
-Student Signature
-                                         1. Amey Patil
-2. Soham Jayakar
-3. Kirtan Dhinoja
-                 4. Mohmad Danish Rehman
-
-	
-
-
- 
-
-
-Approval
-
-
-This is to certify that “Amey Patil, Soham Jayakar, Kirtan Dhinoja, Mohmad Danish Rehman” have satisfactorily completed their project (final stage) on “Game Control Using EEG Based BCI” during the academic term 2024-25 and their report is approved for final submission.
-
-
-
-Examiners
-
-
-………………………
-
-
-……………………….
-
-
-……………………….
-
-
-Date: Place:
- 
-
-
-
-CERTIFICATE
-
-
-This is to certify that the project entitled “Game Control Using EEG Based BCI” is a bonafide work of “Amey Patil, Soham Jayakar, Kirtan Dhinoja, Mohmad Danish Rehman” submitted to the Amity School of Engineering and Technology, Amity University Mumbai in partial fulfilment of the requirement for the degree of B. Tech Computer Science & Engineering.
-
-
-
-
-
-
-
-
-Supervisor Name	          Dr. Deepa Parasar
-
-
-
-
-
-
-
-
-
-Dr. Shrikant Charhate Director, ASET
- 
-
-ACKNOWLEDGEMENT
-
-This project was a great experience of learning and professional development.
-We take this opportunity to express our deepest gratitude and special thanks to our mentor,
-Dr. Rajiv Iyer, Faculty of the Department of Computer Science and Engineering branch at Amity University, Mumbai. Despite being occupied with their schedule, our mentor took out the time to hear, guide and keep us on the correct path. His constant guidance and support throughout the course of this project have led to its timely and successful completion.
-
-We would also like to express our deepest thanks to our department coordinator Dr. Deepa Parasar for her unwavering support.
-
-We would also like to express our deepest thanks to all the faculty members of Amity School of Engineering and Technology (ASET) for encouraging and motivating us throughout the B. Tech Program.
-
-We would also like to express our deepest thanks to our Director Dr. Shrikant Charhate who has been our pillar of support and motivation throughout the duration of the project. 
-
-Lastly, we would like to express wholehearted thanks to our family members, for supporting us with their love and guidance in whatever we pursue.
-
-We perceive this opportunity as a big milestone in our career development. We shall strive to use the gained skills and knowledge in the best possible way and shall continue to work on their improvement, to attain the desired objectives.
- 
-
-ABSTRACT
-
-
-The dynamic evolution of brain-computer interface (BCI) technology, particularly EEG-based BCIs, is opening new frontiers in interactive applications such as gaming, where users can control and interact with game environments using only their brain activity. This paper explores the design and implementation of an EEG-based BCI system for game control by detecting brainwaves and corresponding cognitive states. Through the development of a custom dataset and the definition of key mental commands, we map brain states—such as focus, relaxation, or motor imagery—to specific in-game actions. These innovations enhance user immersion and inclusivity, especially for individuals with physical limitations. Advancements in machine learning and deep learning have significantly improved the adaptability and classification accuracy of such systems. For instance, a 1-D CNN model achieved 91.75% accuracy in motor imagery classification, while a multi-branch CNN model demonstrated improved cross-subject performance, addressing inter-individual variability in EEG data. Traditional classifiers such as Multi-Layer Perceptron (MLP) and Radial Basis Function (RBF) also continue to perform well, achieving up to 98% classification success, underlining their relevance in EEG-based tasks. Furthermore, recent frameworks aimed at enhancing the interpretability of CNNs offer deeper insight into model decisions, fostering transparency in BCI-driven applications. This research presents a complete end-to-end pipeline—from EEG signal acquisition and brain state labeling to model training and game control execution. The experimental framework demonstrates how real-time mental state recognition can be translated into actionable commands within a gaming environment. Through a series of training sessions and performance evaluations, we validate the feasibility of using thought-driven control schemes, highlighting their accuracy, responsiveness, and potential for further development. The findings contribute to the growing field of non-invasive BCIs and underline the transformative possibilities of integrating cognitive computing with interactive entertainment systems. 
-
-Keywords: deep learning, EEG, cognitive rehabilitation, BCI 
-
-TABLE OF CONTENTS
-
-
-  CHAPTER NO.	           TITLE				                                                           PAGE NO.	
-1.				INTRODUCTION
-		1.1		Background
-2.				LITERATURE SURVEY
-		2.1		Introduction
-		2.2		Existing Methodologies		
-		2.3		Comparative Analysis
-3.        				PROBLEM STATEMENT				
-4.				SYSTEM ANALYSIS				
-5.				SYSTEM DESIGN	
-5.1	Design Model – Use case Diagram/
-                          Class Diagram (Detailed Design)
-                          Function Specifications (Data flow diagrams)
-6.				Comparative Analysis
-
-7.				PROJECT TIMELINE		
-		7.1 		Gantt chart		
-8.				IMPLEMENTATION, RESULTS AND TESTING	
-		8.1		Details of Hardware and Software	
-		8.2		Result and Discussion	
-9.				CONCLUSION AND FUTURE SCOPE	
-		9.1		Conclusion	
-		9.2		Future Scope
-			             REFERENCES
-                                                    PUBLICATIONS AND CERTIFICATES
- 
- 
-
-LIST OF FIGURES & IMAGES
-
-
-
-Sr. No.	Figure/Image Title	Page No.
-1	Electrode Placements	28
-2	Data Collection 	36
-3	Basic Connection for EEG	38
-4	DIY Neuroscience Kit	39
-5	System Workflow	47
-       6 	Data Flow Diagrams	48
-7	Gantt Chart	        55        
-8	Confusion matrix of XGBoost and Random Forest	        64
-9	Confusion matrix for SVM and KNN	       65
-10	Graph for beta wave and alpha wave	      66
-11	Graph for extended Dataset	      67
-12	Label Distribution	     68
-13	LSTM Model Accuracy and Loss	    69
-       14	Important Features	    69
-15	Training loss and Accuracy for XGBoost	   70
-16	Training loss and Accuracy	   71
-17	Updated Confusion Matrix	   72
-18	ROC Curve	   73
-19	Precision-Recall curve comparison	   74
- 
-LIST OF TABLES
-
-
-Sr. No.	Figure/Image Title	Page No.
-1	Comparison of Classification Models	51
-2	 Comparison of EEG Devices	54
-
- 
-
-1.	INTRODUCTION
-
-
-1.1	Background 
-
-Electroencephalography (EEG)--based Brain-Computer Interfaces (BCIs) are redefining how humans interact with digital systems, offering a direct communication pathway between the brain and external devices. Unlike traditional interfaces that rely on muscular activity and tactile input, BCIs tap into the brain’s electrical activity, captured through non-invasive sensors, to interpret user intentions in real-time. This breakthrough enables hands-free interaction, paving the way for novel applications across healthcare, education, entertainment, and assistive technologies. In a world increasingly driven by digital innovation, such technologies offer not just convenience but the possibility of accessibility, inclusivity, and enhanced user experience.
-
-The appeal of BCIs lies in their ability to bridge the gap between cognitive intent and machine response, effectively translating mental activity into executable commands. Within this rapidly advancing field, EEG-based BCIs stand out due to their affordability, portability, and relatively simple setup compared to invasive or semi-invasive alternatives. These systems monitor brainwave patterns—specifically alpha (8–13 Hz), beta (13–30 Hz), theta (4–8 Hz), and delta (0.5–4 Hz) waves—using scalp-mounted electrodes. These waves, associated with various cognitive and physiological states, can be translated into meaningful information when captured accurately and processed appropriately. For instance, alpha waves are typically linked to relaxation, while beta waves are associated with active thinking and focus.
-
-The growing accessibility of consumer-grade EEG devices has accelerated research and development in this space, making it feasible for hobbyists, researchers, and developers to explore cognitive interaction paradigms without requiring high-end laboratory equipment. These systems, when coupled with robust machine learning pipelines and open-source tools, offer unprecedented opportunities to design innovative, real-world applications that can respond to mental commands alone. The ability to harness cognitive states such as attention, relaxation, and motor imagery opens new opportunities for intuitive, seamless interaction with machines, allowing users to engage with digital systems in ways that were once confined to science fiction.
-
-Gaming is emerging as one of the most promising domains for BCI integration. It offers an engaging testbed for real-time neural interaction and a powerful tool for neurocognitive training and rehabilitation. Thought-controlled gaming systems not only revolutionize the gaming experience for able-bodied users but also hold tremendous potential for individuals with physical disabilities. By enabling users to control gameplay using mental commands, BCI-based gaming platforms create a level playing field, eliminating the need for conventional controllers or physical gestures. This shift contributes to greater digital inclusivity, enabling users with limited motor function to access entertainment, cognitive training, and social interaction within virtual environments.
-Furthermore, BCI-integrated games provide opportunities for monitoring and improving cognitive performance through neurofeedback mechanisms. Real-time insights into a user’s brain activity can be used to adapt game difficulty dynamically, track focus levels, or even aid in rehabilitation for conditions such as attention-deficit disorders or stroke recovery. This dual-purpose nature—combining entertainment with therapeutic value—marks a unique convergence of neuroscience, artificial intelligence, and human-computer interaction.
-
-However, the transition from theoretical models to real-world BCI applications comes with significant challenges. EEG signals are inherently low-amplitude, noisy, and highly subject-specific. Signal quality may vary with environmental factors, electrode placement, and even the user’s physiological condition. These factors necessitate sophisticated preprocessing and feature extraction techniques to achieve meaningful classification. Filtering techniques such as notch filters (to remove power line interference) and bandpass filters (to isolate specific frequency bands) are crucial in refining raw EEG data into usable signals. Furthermore, real-time applications demand high-speed, accurate inference systems that can adapt to varying user-profiles and environmental conditions.
-
-Another key challenge lies in the variability of EEG signals across individuals and sessions. A model trained on one individual’s brain signals may not generalize well to another user without substantial retraining or transfer learning. Similarly, even the same user may exhibit slightly different EEG patterns based on factors like fatigue, mood, or concentration levels. These inconsistencies pose limitations on model accuracy and long-term reliability, making personalization and adaptive learning essential components of any practical BCI implementation.
-
-Addressing these issues requires a balance between hardware efficiency, signal fidelity, and robust software pipelines. Lightweight models that can run on consumer-grade computers while still achieving high accuracy are essential for real-time applications. Moreover, modular system architectures that allow for easy integration, debugging, and extension make BCI systems more scalable and maintainable.
-
-This research presents the design and development of a cost-effective EEG-based BCI system for controlling a computer game using cognitive states. Utilizing a custom dataset collected through a DIY Neuroscience Kit, we mapped two distinct mental states—attentive and relaxed—to in-game control actions (acceleration and braking). The system leverages open-source tools, Arduino-based data acquisition, and signal processing pipelines involving notch and bandpass filtering. Key features, including Power Spectral Density (PSD) and statistical measures (mean, standard deviation, skewness, and kurtosis), were extracted and fed into machine learning classifiers like XGBoost to predict cognitive states in real time.
-
-To enhance model performance, we incorporated automated hyperparameter tuning using Optuna—a powerful optimization framework that outperforms traditional grid search or random search by efficiently navigating the parameter space. This resulted in increased model accuracy, better generalization across different user sessions, and reduced training time. The choice of XGBoost was influenced by its robustness to overfitting, scalability, and strong performance on tabular data with heterogeneous features.
-Real-time implementation was achieved using a lightweight Python-based framework that converts EEG predictions into game control inputs using the pyautogui library. This allowed for seamless interaction between the BCI output and game environment without the need for complex game engine modifications. Additionally, we employed visualization tools to monitor EEG signal quality, classifier confidence levels, and game state synchronization—providing a transparent view into the decision-making process of the system.
-
-The final system demonstrated robust performance in distinguishing between attentive and relaxed mental states, achieving a high classification accuracy and real-time responsiveness suitable for gameplay. By integrating EEG-based BCI with interactive gaming, this study contributes to the expanding frontier of non-invasive neurotechnology. It underscores the potential of combining cognitive computing, real-time analytics, and user-centric design to foster inclusive digital ecosystems.
-The broader vision of this project is to promote BCI adoption in mainstream applications, particularly for users who are otherwise limited by conventional control systems. As the technology matures, its applications could extend to smart home systems, augmented communication tools, and immersive VR environments. The goal is not only to demonstrate technical feasibility but also to inspire further innovation in creating adaptive, scalable, and accessible BCI solutions for everyday use. Through this work, we aim to catalyse further research in affordable, adaptive, and user-friendly BCI systems—laying the groundwork for a more inclusive digital future where thoughts can truly control machines.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2.	LITERATURE SURVEY
-
-2.1	 Introduction
-
-
-Electroencephalography (EEG)--based Brain-Computer Interfaces (BCIs) represent a transformative intersection of neuroscience, engineering, and artificial intelligence, enabling direct communication between the human brain and external devices. This technology, which decodes brain signals to control devices, has widespread application in diverse domains such as neurorehabilitation, assistive technology, human-computer interaction, and secure authentication. EEG-based BCIs are particularly beneficial for individuals with severe motor impairments, such as stroke victims or individuals with paralysis, enabling them to perform tasks through motor imagery (MI) and communicate using brain activity alone (1)
-
-BCI systems typically rely on non-invasive EEG to capture electrical activity in the brain. However, these signals come with inherent challenges such as noise interference, individual differences in brain activity, and the difficulty in translating raw EEG data into meaningful commands. To address these challenges, significant advancements in signal processing, feature extraction, and machine learning techniques have been made. In particular, convolutional neural networks (CNNs) and other deep learning models have demonstrated impressive success in enhancing the accuracy and reliability of EEG-based BCIs [2].
-
-One such advancement is explored in the paper "Authentication with a One-Dimensional CNN Model Using EEG-Based Brain-Computer Interface," which focuses on using EEG signals for user authentication. By employing a 1-D CNN model, the authors achieved an accuracy of 91.75% in classifying motor imagery signals. This approach not only improves classification performance but also introduces a novel method of using EEG-based authentication systems, making it more accessible and secure for individuals, including those with disabilities [3] .In line with this, EEG-based BCIs are being used in a range of applications, including control of external devices such as a mouse cursor through motor imagery. The paper "EEG-based Mouse Cursor Control Using Motor Imagery Brain-Computer Interface" outlines a semi-online BCI system that achieved 93.60% accuracy using an Emotiv EPOC+ headset. The authors integrate real-time data processing with custom algorithms for EEG signal classification, making it an effective solution for assisting users with mobility impairments [4] .
-
-While multi-channel EEG systems have been the standard in EEG-based BCIs, recent studies demonstrate the potential of single-channel EEG systems in making these technologies more affordable and portable. The paper "Motor Imagery Classification Using Single Channel of EEG in Online Brain-Computer Interface" explores this approach, achieving 100% accuracy for left-hand motor imagery and 87.47% accuracy for right-hand motor imagery. By employing wavelet transform for feature extraction and classifiers like SVM and KNN, the study highlights that even single-channel systems can perform competitively, offering a more accessible and cost-effective alternative for real-world applications [5] . Additionally, research has focused on improving cross-subject classification of motor imagery signals, as seen in "Enhancing Cross-Subject Motor Imagery Classification in EEG-Based Brain-Computer Interfaces by Using Multi-Branch CNN." The authors propose a multi-branch CNN model that outperforms previous models by learning generalized features from multiple subjects, thus improving the reliability of MI-based systems across diverse users [6] .
-
-Despite the promising advancements, one of the ongoing challenges is the interpretability of deep learning models used in BCIs. CNNs, while effective, often operate as "black boxes," making it difficult to underst
