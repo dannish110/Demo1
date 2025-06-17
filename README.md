@@ -72,3 +72,79 @@ File → Project Structure → SDKs → Add Java 11+.
 
 Would you like this step documented with screenshots and icons for PDF/Word use or GitHub README.md format?
 
+Great! Here's how you can document the Cucumber plugin installation process using a VPN set to France, which can be useful when the plugin is unavailable in India:
+
+
+---
+
+🔌 Installing Cucumber Plugin in IntelliJ (with VPN workaround)
+
+🔹 Problem Encountered
+
+In the company network or in the India region, the Cucumber for Java plugin may not appear or download in IntelliJ Plugin Marketplace due to:
+
+Regional restrictions
+
+Repository access limits
+
+Firewall/proxy blocks
+
+
+🔹 Solution: Use VPN (Set to France)
+
+1. Connect to VPN:
+
+Launch your company-approved VPN application (e.g., Zscaler, FortiClient).
+
+Select France as the VPN location.
+
+Ensure VPN is active and connected.
+
+
+
+2. Open IntelliJ IDEA:
+
+Navigate to File → Settings → Plugins.
+
+
+
+3. Install Cucumber Plugin:
+
+In the Marketplace tab, search for: Cucumber for Java.
+
+If visible, click Install.
+
+Wait for download and installation to complete.
+
+Restart IntelliJ if prompted.
+
+
+
+4. Verify Installation:
+
+Go to Plugins → Installed tab.
+
+Ensure Cucumber for Java is listed and enabled.
+
+
+
+
+
+---
+
+💡 Tip
+
+If VPN is not allowed or fails, you may also:
+
+Download the plugin manually from JetBrains plugin repository:
+https://plugins.jetbrains.com/plugin/7212-cucumber-for-java
+
+Install via "Install Plugin from Disk..." option in IntelliJ.
+
+
+
+---
+
+Would you like to bundle these installation steps (IntelliJ + Plugin via VPN) as a clean PDF or just continue building the documentation here?
+
+
