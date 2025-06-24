@@ -124,3 +124,46 @@ public class BrowserUtility {
     // protected String getProperties(String url) { ... }
     // If you still need to load properties, make it a separate static method.
 }
+
+package stepDefinitions; // Or com.example.stepDefinitions
+
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.When;
+import io.cucumber.java.en.Then;
+import pageObjects.PEBreachCreateNewCase;
+import utils.BrowserUtility; // Import your BrowserUtility
+import org.openqa.selenium.WebDriver; // Still need this for getting driver from Hooks
+
+public class PEBreachCreateNewCaseStep {
+
+    PEBreachCreateNewCase peBreachCreateNewCase;
+    private BrowserUtility browserUtility; // Declare an instance of BrowserUtility
+
+    // Constructor for the Step Definition class
+    public PEBreachCreateNewCaseStep() {
+        WebDriver driver = Hooks.getDriver(); // Get the thread-local driver
+        if (driver == null) {
+            // Log or handle this as a critical error, as tests won't run without a driver.
+            // You can replace throw with a logger.error() if you prefer.
+            throw new IllegalStateException("WebDriver is null in Step Definition constructor. Check Hooks setup.");
+        }
+        this.browserUtility = new BrowserUtility(driver); // Instantiate BrowserUtility with the driver
+        this.peBreachCreateNewCase = new PEBreachCreateNewCase(driver); // Pass driver to Page Object
+    }
+
+    @Given("the user is on PE Breach Board module Page")
+    public void the_user_is_on_pe_breach_board_module_page() {
+        // Use the browserUtility instance to call actions
+        browserUtility.getDriver().get("http://compliance-ethics-uat2.staging.echonet/context/login.html"); // If you put URL loading back into a browserUtility method, call it here.
+        // OR, simply get the driver from Hooks directly for initial navigation:
+        // Hooks.getDriver().get("http://compliance-ethics-uat2.staging.echonet/context/login.html");
+    }
+
+    @When("the user clicks on Create New Case icon")
+    public void the_user_clicks_on_create_new_case_icon() {
+        // Call the method on your browserUtility instance
+        browserUtility.clickIcon(peBreachCreateNewCase.getCreateNewCaseIcon());
+    }
+
+    // ... other step definitions, always using browserUtility.yourMethod()
+}
